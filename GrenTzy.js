@@ -4613,7 +4613,6 @@ bot.onText(/\/update/, async (msg) => {
   const chatId = msg.chat.id;
   const senderId = msg.from.id;
 
-  // Hanya owner yang boleh update
   if (!isOwner(senderId)) {
     return bot.sendMessage(chatId, "❌ Hanya owner yang bisa melakukan update.");
   }
@@ -4636,5 +4635,67 @@ bot.onText(/\/update/, async (msg) => {
   } catch (e) {
     console.error('Update error:', e.message);
     bot.sendMessage(chatId, "❌ Update gagal. Pastikan repo dan file GrenTzy.js tersedia.");
+  }
+});
+
+
+bot.onText(/\/checkupdate/, async (msg) => {
+  const chatId = msg.chat.id;
+  const senderId = msg.from.id;
+
+  if (!isOwner(senderId)) {
+    return bot.sendMessage(chatId, "❌ Hanya owner yang bisa mengecek update.");
+  }
+
+  const repoRaw = "https://raw.githubusercontent.com/khususbanding749-ai/GrenTzy1/refs/heads/main/GrenTzy.js";
+
+  const statusMsg = await bot.sendMessage(chatId, "🔍 Mengecek update...");
+
+  try {
+    const { data: remoteData } = await axios.get(repoRaw, { responseType: 'text' });
+
+    if (!remoteData || remoteData.length < 100) {
+      return bot.editMessageText("❌ Gagal mengambil file remote (kosong atau tidak valid).", {
+        chat_id: chatId,
+        message_id: statusMsg.message_id
+      });
+    }
+
+    let localData = '';
+    try {
+      localData = fs.readFileSync('./GrenTzy.js', 'utf8');
+    } catch (err) {
+      return bot.editMessageText("❌ File lokal tidak ditemukan.", {
+        chat_id: chatId,
+        message_id: statusMsg.message_id
+      });
+    }
+
+    const hashRemote = crypto.createHash('sha256').update(remoteData).digest('hex');
+    const hashLocal = crypto.createHash('sha256').update(localData).digest('hex');
+
+    if (hashRemote === hashLocal) {
+      await bot.editMessageText("✅ Bot sudah menggunakan versi terbaru (tidak ada update).", {
+        chat_id: chatId,
+        message_id: statusMsg.message_id
+      });
+    } else {
+      await bot.editMessageText(
+        "🔄 Update tersedia! Jalankan `/update` untuk memperbarui bot.\n\n" +
+        `📦 Ukuran remote: ${(remoteData.length / 1024).toFixed(2)} KB\n` +
+        `📦 Ukuran lokal : ${(localData.length / 1024).toFixed(2)} KB`,
+        {
+          chat_id: chatId,
+          message_id: statusMsg.message_id,
+          parse_mode: "Markdown"
+        }
+      );
+    }
+  } catch (e) {
+    console.error('Check update error:', e.message);
+    bot.editMessageText("❌ Gagal mengecek update. Pastikan repo dan file tersedia.", {
+      chat_id: chatId,
+      message_id: statusMsg.message_id
+    });
   }
 });
