@@ -4770,6 +4770,9 @@ bot.onText(/\/checkfile(?:\s+(\S+))?/, async (msg, match) => {
   }
 });
 
+// ============================================================
+//              COMMAND /listrepo (LIHAT ISI REPOSITORY)
+// ============================================================
 bot.onText(/^\/listrepo(?:\s+(\S+))?$/, async (msg, match) => {
   const chatId = msg.chat.id;
   const senderId = msg.from.id;
@@ -4778,12 +4781,11 @@ bot.onText(/^\/listrepo(?:\s+(\S+))?$/, async (msg, match) => {
     return bot.sendMessage(chatId, "❌ Hanya owner yang bisa melihat repository.");
   }
 
-  const subPath = match[1] || ""; // path opsional, misal "folder/subfolder"
+  const subPath = match[1] || "";
   const repoOwner = "khususbanding749-ai";
   const repoName = "GrenTzy1";
   const branch = "main";
 
-  // Encode path
   const path = subPath ? encodeURIComponent(subPath) : "";
   const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${path}?ref=${branch}`;
 
@@ -4797,42 +4799,127 @@ bot.onText(/^\/listrepo(?:\s+(\S+))?$/, async (msg, match) => {
 
     const data = response.data;
     if (!Array.isArray(data)) {
-      // Jika bukan array (misal path mengarah ke file)
       const fileInfo = data;
-      return bot.sendMessage(chatId, `📄 ${fileInfo.name} adalah file, bukan folder. Gunakan /checkfile ${fileInfo.name} untuk detail.`, { parse_mode: 'Markdown' });
+      return bot.sendMessage(chatId,
+        `📄 <b>${fileInfo.name}</b> adalah file, bukan folder.\nGunakan /checkfile ${fileInfo.name} untuk detail.`,
+        { parse_mode: 'HTML' }
+      );
     }
 
     if (data.length === 0) {
-      return bot.sendMessage(chatId, `📁 Folder \`${subPath || '/'}\` kosong.`, { parse_mode: 'Markdown' });
+      return bot.sendMessage(chatId,
+        `📁 Folder <code>${subPath || '/'}</code> kosong.`,
+        { parse_mode: 'HTML' }
+      );
     }
 
-    // Pisahkan folder dan file
     const folders = data.filter(item => item.type === 'dir').map(item => `📁 ${item.name}/`);
     const files = data.filter(item => item.type === 'file').map(item => {
       const size = (item.size / 1024).toFixed(1);
       return `📄 ${item.name} (${size} KB)`;
     });
 
-    let message = `📂 *Repository: ${repoOwner}/${repoName}*\n`;
-    message += `📁 Path: \`${subPath || '/'}\`\n`;
+    let message = `<b>📂 Repository: ${repoOwner}/${repoName}</b>\n`;
+    message += `📁 Path: <code>${subPath || '/'}</code>\n`;
     message += `🌿 Branch: ${branch}\n`;
     message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
 
     if (folders.length > 0) {
-      message += `*📁 FOLDER (${folders.length})*\n${folders.join('\n')}\n\n`;
+      message += `<b>📁 FOLDER (${folders.length})</b>\n${folders.join('\n')}\n\n`;
     }
     if (files.length > 0) {
-      message += `*📄 FILE (${files.length})*\n${files.join('\n')}\n`;
+      message += `<b>📄 FILE (${files.length})</b>\n${files.join('\n')}\n`;
     }
 
     message += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
-    message += `Gunakan /checkfile <nama_file> untuk detail file.`;
+    message += `Gunakan /checkfile &lt;nama_file&gt; untuk detail file.`;
 
-    await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+    await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
 
   } catch (error) {
     if (error.response && error.response.status === 404) {
-      return bot.sendMessage(chatId, `❌ Path \`${subPath || '/'}\` tidak ditemukan.`, { parse_mode: 'Markdown' });
+      return bot.sendMessage(chatId,
+        `❌ Path <code>${subPath || '/'}</code> tidak ditemukan.`,
+        { parse_mode: 'HTML' }
+      );
+    }
+    console.error('Error listing repo:', error.message);
+    bot.sendMessage(chatId, `❌ Gagal mengambil daftar repository: ${error.message}`);
+  }
+});
+
+// ============================================================
+//              ALIAS /repofiles (SAMA DENGAN /listrepo)
+// ============================================================
+bot.onText(/^\/repofiles(?:\s+(\S+))?$/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const senderId = msg.from.id;
+
+  if (!isOwner(senderId)) {
+    return bot.sendMessage(chatId, "❌ Hanya owner yang bisa melihat repository.");
+  }
+
+  const subPath = match[1] || "";
+  const repoOwner = "khususbanding749-ai";
+  const repoName = "GrenTzy1";
+  const branch = "main";
+
+  const path = subPath ? encodeURIComponent(subPath) : "";
+  const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${path}?ref=${branch}`;
+
+  try {
+    const response = await axios.get(apiUrl, {
+      headers: {
+        'User-Agent': 'GrenTzy-Bot',
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+
+    const data = response.data;
+    if (!Array.isArray(data)) {
+      const fileInfo = data;
+      return bot.sendMessage(chatId,
+        `📄 <b>${fileInfo.name}</b> adalah file, bukan folder.\nGunakan /checkfile ${fileInfo.name} untuk detail.`,
+        { parse_mode: 'HTML' }
+      );
+    }
+
+    if (data.length === 0) {
+      return bot.sendMessage(chatId,
+        `📁 Folder <code>${subPath || '/'}</code> kosong.`,
+        { parse_mode: 'HTML' }
+      );
+    }
+
+    const folders = data.filter(item => item.type === 'dir').map(item => `📁 ${item.name}/`);
+    const files = data.filter(item => item.type === 'file').map(item => {
+      const size = (item.size / 1024).toFixed(1);
+      return `📄 ${item.name} (${size} KB)`;
+    });
+
+    let message = `<b>📂 Repository: ${repoOwner}/${repoName}</b>\n`;
+    message += `📁 Path: <code>${subPath || '/'}</code>\n`;
+    message += `🌿 Branch: ${branch}\n`;
+    message += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+    if (folders.length > 0) {
+      message += `<b>📁 FOLDER (${folders.length})</b>\n${folders.join('\n')}\n\n`;
+    }
+    if (files.length > 0) {
+      message += `<b>📄 FILE (${files.length})</b>\n${files.join('\n')}\n`;
+    }
+
+    message += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
+    message += `Gunakan /checkfile &lt;nama_file&gt; untuk detail file.`;
+
+    await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
+
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      return bot.sendMessage(chatId,
+        `❌ Path <code>${subPath || '/'}</code> tidak ditemukan.`,
+        { parse_mode: 'HTML' }
+      );
     }
     console.error('Error listing repo:', error.message);
     bot.sendMessage(chatId, `❌ Gagal mengambil daftar repository: ${error.message}`);
