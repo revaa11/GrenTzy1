@@ -4699,3 +4699,82 @@ bot.onText(/\/checkupdate/, async (msg) => {
     });
   }
 });
+
+bot.onText(/\/enchard/, async (msg) => {
+    const chatId = msg.chat.id;
+    const replyMessage = msg.reply_to_message;
+
+    console.log(`Perintah diterima: /enchard dari pengguna: ${msg.from.username || msg.from.id}`);
+
+    if (!replyMessage || !replyMessage.document || !replyMessage.document.file_name.endsWith('.js')) {
+        return bot.sendMessage(chatId, '😡 Silakan Balas/Tag File .js\nBiar Gua Gak Salah Tolol.');
+    }
+
+    const fileId = replyMessage.document.file_id;
+    const fileName = replyMessage.document.file_name;
+
+    // Mendapatkan link file
+    const fileLink = await bot.getFileLink(fileId);
+    const response = await axios.get(fileLink, { responseType: 'arraybuffer' });
+    const codeBuffer = Buffer.from(response.data);
+
+    // Simpan file sementara
+    const tempFilePath = `./@hardenc${fileName}`;
+    fs.writeFileSync(tempFilePath, codeBuffer);
+
+    // Enkripsi kode menggunakan JsConfuser
+    bot.sendMessage(chatId, "⌛️Sabar...\n Lagi Di Kerjain Sama wariors Encryptnya...");
+    const obfuscatedCode = await JsConfuser.obfuscate(codeBuffer.toString(), {
+        target: "node",
+        preset: "high",
+        compact: true,
+        minify: true,
+        flatten: true,
+        identifierGenerator: function () {
+            const originalString = "肀VampireIsBack舀" + "肀VampireIsBack舀";
+            function removeUnwantedChars(input) {
+                return input.replace(/[^a-zA-Z肀VampireIsBack舀]/g, '');
+            }
+            function randomString(length) {
+                let result = '';
+                const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+                for (let i = 0; i < length; i++) {
+                    result += characters.charAt(Math.floor(Math.random() * characters.length));
+                }
+                return result;
+            }
+            return removeUnwantedChars(originalString) + randomString(2);
+        },
+        renameVariables: true,
+        renameGlobals: true,
+        stringEncoding: true,
+        stringSplitting: 0.0,
+        stringConcealing: true,
+        stringCompression: true,
+        duplicateLiteralsRemoval: 1.0,
+        shuffle: { hash: 0.0, true: 0.0 },
+        stack: true,
+        controlFlowFlattening: 1.0,
+        opaquePredicates: 0.9,
+        deadCode: 0.0,
+        dispatcher: true,
+        rgf: false,
+        calculator: true,
+        hexadecimalNumbers: true,
+        movedDeclarations: true,
+        objectExtraction: true,
+        globalConcealing: true
+    });
+
+    // Simpan hasil enkripsi
+    const encryptedFilePath = `./@hardenc${fileName}`;
+    fs.writeFileSync(encryptedFilePath, obfuscatedCode);
+
+    // Kirim file terenkripsi ke pengguna
+    bot.sendDocument(chatId, encryptedFilePath, {
+        caption: `
+❒━━━━━━༽𝗦𝘂𝗰𝗰𝗲𝘀𝘀༼━━━━━━❒
+┃ - 𝗘𝗻𝗰𝗿𝘆𝗽𝘁 𝗛𝗮𝗿𝗱 𝗝𝘀𝗼𝗻 𝗨𝘀𝗲𝗱 -
+❒━━━━━━━━━━━━━━━━━━━━❒`
+    });
+});
